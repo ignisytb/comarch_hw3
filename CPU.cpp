@@ -48,7 +48,7 @@ void CPU::clock(){
             }
         } else if(MW.CS.RegWrite && (MW.rd != 0) && (EM.rd != IE.rt) && (MW.rd == IE.rt)){
             Frt = true;
-            if(MW.CS.MEMtoReg){
+            if(MW.CS.MEMtoReg){     
                 IE.data2 = MW.MEM_OUT;
                 reg->Write(MW.rd,MW.MEM_OUT);
             } else {
@@ -86,7 +86,7 @@ void CPU::clock(){
             }
         }
     }
-    
+
     if(EM.CS.Branch){
     } else {
         if(EM.CS.MemWrite){
