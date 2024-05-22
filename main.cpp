@@ -22,11 +22,14 @@ int main(int argc, char* argv[]) {
                 continue;
             }
             if(str == "m"){
+                ops.mop = true;
                 string ads(argv[arg_i+1]);
                 for(int i=0;i<ads.length();i++){
                     if(ads[i]==':'){
-                        ops.addr1 = stoll(ads.substr(0,i));
-                        ops.addr2 = stoll(ads.substr(i+1,ads.length()));
+                        ops.addr1 = stoll(ads.substr(0,i),0,16);
+                        ops.addr2 = stoll(ads.substr(i+1,ads.length()),0,16);
+                        cout << ads.substr(0,i) << ":" << ads.substr(i+1,ads.length()) << endl;
+                        cout << ops.addr1 << ":" << ops.addr2 << endl;
                     }
                 }
                 arg_i += 2;
@@ -66,9 +69,17 @@ int main(int argc, char* argv[]) {
     CPU* cpu = new CPU(ops);
     cpu->Load_File(filename);
     
-    char opcodes = 0x09;
-    ConSig cs = cpu->ControlUnit(opcodes);
-    cout << cs.Branch << endl;
+    // char opcodes = 0x09;
+    // ConSig cs = cpu->ControlUnit(opcodes);
+    // cout << cs.Branch << endl;
+
+    // cout << cpu->Read_Mem(0x400000) << endl;
+
+    if(ops.nop){
+        for(int i=0;i<ops.num_inst;i++){
+            cpu->cycle();
+        }
+    }
 
 
 

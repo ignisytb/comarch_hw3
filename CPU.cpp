@@ -36,118 +36,144 @@ void CPU::clock(){
     bool Frs=0,Frt=0;
 
     // WB stage
-    if(MW.CS.RegWrite){
-        if(MW.CS.RegWrite && (MW.rd != 0) && (EM.rd != IE.rs) && (MW.rd == IE.rs)){
-            Frs = true;
-            if(MW.CS.MEMtoReg){
-                IE.data1 = MW.MEM_OUT;
-                reg->Write(MW.rd,MW.MEM_OUT);
+    if (MW.pc != 0){
+        if(MW.CS.RegWrite){
+            if(MW.CS.RegWrite && (MW.rd != 0) && (EM.rd != IE.rs) && (MW.rd == IE.rs)){
+                Frs = true;
+                if(MW.CS.MEMtoReg){
+                    IE.data1 = MW.MEM_OUT;
+                    reg->Write(MW.rd,MW.MEM_OUT);
+                } else {
+                    IE.data1 = MW.ALU_OUT;
+                    reg->Write(MW.rd,MW.ALU_OUT);
+                }
+            } else if(MW.CS.RegWrite && (MW.rd != 0) && (EM.rd != IE.rt) && (MW.rd == IE.rt)){
+                Frt = true;
+                if(MW.CS.MEMtoReg){     
+                    IE.data2 = MW.MEM_OUT;
+                    reg->Write(MW.rd,MW.MEM_OUT);
+                } else {
+                    IE.data2 = MW.ALU_OUT;
+                    reg->Write(MW.rd,MW.ALU_OUT);
+                }
             } else {
-                IE.data1 = MW.ALU_OUT;
-                reg->Write(MW.rd,MW.ALU_OUT);
-            }
-        } else if(MW.CS.RegWrite && (MW.rd != 0) && (EM.rd != IE.rt) && (MW.rd == IE.rt)){
-            Frt = true;
-            if(MW.CS.MEMtoReg){     
-                IE.data2 = MW.MEM_OUT;
-                reg->Write(MW.rd,MW.MEM_OUT);
-            } else {
-                IE.data2 = MW.ALU_OUT;
-                reg->Write(MW.rd,MW.ALU_OUT);
-            }
-        } else {
-            if(MW.CS.MEMtoReg){
-                reg->Write(MW.rd,MW.MEM_OUT);
-            } else {
-                reg->Write(MW.rd,MW.ALU_OUT);
+                if(MW.CS.MEMtoReg){
+                    reg->Write(MW.rd,MW.MEM_OUT);
+                } else {
+                    reg->Write(MW.rd,MW.ALU_OUT);
+                }
             }
         }
     }
 
     // MEM stage
-    if(EM.CS.RegWrite){
-        if(EM.CS.RegWrite && (EM.rd != 0) && (EM.rd==IE.rs)){
-            Frs = true;
-            if(EM.CS.ALUNeg){
-                IE.data1 = EM.ALU_OUT.Neg;
-                reg->Write(EM.rd,EM.ALU_OUT.Neg);
-            } else {
-                IE.data1 = EM.ALU_OUT.result;
-                reg->Write(EM.rd,EM.ALU_OUT.result);
-            }
-        } else if (EM.CS.RegWrite && (EM.rd != 0) && (EM.rd == IE.rt)){
-            Frt = true;
-            if(EM.CS.ALUNeg){
-                IE.data2 = EM.ALU_OUT.Neg;
-                reg->Write(EM.rd,EM.ALU_OUT.Neg);
-            } else {
-                IE.data2 = EM.ALU_OUT.result;
-                reg->Write(EM.rd,EM.ALU_OUT.result);
+    if(EM.pc!=0){
+        if(EM.CS.RegWrite){
+            if(EM.CS.RegWrite && (EM.rd != 0) && (EM.rd==IE.rs)){
+                Frs = true;
+                if(EM.CS.ALUNeg){
+                    IE.data1 = EM.ALU_OUT.Neg;
+                } else {
+                    cout << "Frs" << endl;
+                    IE.data1 = EM.ALU_OUT.result;
+                }
+            } else if (EM.CS.RegWrite && (EM.rd != 0) && (EM.rd == IE.rt)){
+                Frt = true;
+                if(EM.CS.ALUNeg){
+                    IE.data2 = EM.ALU_OUT.Neg;
+                } else {
+                    cout << "Frt" << endl;
+                    IE.data2 = EM.ALU_OUT.result;
+                }
             }
         }
-    }
 
-    if(EM.CS.Branch){
-    } else {
-        if(EM.CS.MemWrite){
-            if(EM.CS.RWByte){
-                dram->WriteByte(EM.data2, EM.ALU_OUT.result&0xFF);
-            } else {
-                dram->Write(EM.data2, EM.ALU_OUT.result);
-            }
-        } else if(EM.CS.MEMRead){
-            if(EM.CS.RWByte){
-                MW.MEM_OUT=dram->ReadByte(EM.data2);
-            } else {
-                MW.MEM_OUT=dram->Read(EM.data2);
-            }
-        } else if(Frt || Frs) {
-            if(EM.CS.ALUNeg){
-                MW.ALU_OUT = EM.ALU_OUT.Neg;
-            } else {
-                MW.ALU_OUT = EM.ALU_OUT.result;
-            }
+        if(EM.CS.Branch){
+            // Branch Prediction, Jump
         } else {
-            // Finish Step
+            if(EM.CS.MemWrite){
+                if(EM.CS.RWByte){
+                    dram->WriteByte(EM.data2, EM.ALU_OUT.result&0xFF);
+                } else {
+                    dram->Write(EM.data2, EM.ALU_OUT.result);
+                }
+            } else if(EM.CS.MEMRead){
+                if(EM.CS.RWByte){
+                    MW.MEM_OUT=dram->ReadByte(EM.data2);
+                } else {
+                    MW.MEM_OUT=dram->Read(EM.data2);
+                }
+            } else if(Frt || Frs) {
+                if(EM.CS.ALUNeg){
+                    MW.ALU_OUT = EM.ALU_OUT.Neg;
+                } else {
+                    MW.ALU_OUT = EM.ALU_OUT.result;
+                }
+            } else {
+                if(EM.CS.RegWrite){
+                    if(EM.CS.ALUNeg){
+                        MW.ALU_OUT = EM.ALU_OUT.Neg;
+                    } else {
+                        MW.ALU_OUT = EM.ALU_OUT.result;
+                    }
+                } else {
+                    MW.pc = 0;
+                }
+            }
+
+            MW.rd = EM.rd;
         }
+        MW.CS = EM.CS;
+        MW.pc = EM.pc;
     }
-    MW.CS = EM.CS;
 
     // EX stage
-    EM.BR_TARGET = (IE.IMM << 2) + IE.NPC;
-    if(IE.CS.ALUSrc){
-        EM.ALU_OUT = alu->ALU_Con(IE.CS.ALUOp, IE.Funct, IE.data1, IE.IMM);
-    } else {
-        EM.ALU_OUT = alu->ALU_Con(IE.CS.ALUOp, IE.Funct, IE.data1, IE.data2);
+    if(IE.pc!=0){
+        EM.BR_TARGET = (IE.IMM << 2) + IE.NPC;
+        if(IE.CS.ALUSrc){
+            EM.ALU_OUT = alu->ALU_Con(IE.CS.ALUOp, IE.Funct, IE.data1, IE.IMM);
+        } else {
+            EM.ALU_OUT = alu->ALU_Con(IE.CS.ALUOp, IE.Funct, IE.data1, IE.data2);
+            cout << dec << EM.ALU_OUT.result << endl;
+        }
+        EM.data2 = IE.data2;
+        if(IE.CS.RegDst){
+            EM.rd = IE.rd;
+        } else {
+            EM.rd = IE.rt;
+        }
+        EM.CS = IE.CS;
+        EM.pc = IE.pc;
     }
-    EM.data2 = IE.data2;
-    if(IE.CS.RegDst){
-        EM.rd = IE.rd;
-    } else {
-        EM.rd = IE.rt;
-    }
-    EM.CS = IE.CS;
 
     // ID stage
-    ConSig CS = ControlUnit((II.instr >> 26) & 0x3F);
-    IE.NPC = II.NPC;
-    IE.rs = (II.instr >> 21) & 0x1F;
-    IE.rt = (II.instr >> 16) & 0x1F;
-    IE.Funct = II.instr & 0x3F;
-    IE.IMM = II.instr & 0xFFFF;
-    if(!Frs){
-        IE.data1 = reg->Read(IE.rs);
+    if(II.pc!=0){
+        ConSig CS = ControlUnit((II.instr >> 26) & 0x3F);
+        IE.NPC = II.NPC;
+        IE.rs = (II.instr >> 21) & 0x1F;
+        IE.rt = (II.instr >> 16) & 0x1F;
+        IE.Funct = II.instr & 0x3F;
+        IE.IMM = II.instr & 0xFFFF;
+        if(!Frs){
+            IE.data1 = reg->Read(IE.rs);
+        }
+        if(!Frt){
+            IE.data2 = reg->Read(IE.rt);
+        }
+        IE.CS = CS;
+        IE.pc = II.pc;
     }
-    if(!Frt){
-        IE.data2 = reg->Read(IE.rt);
-    }
-    IE.CS = CS;
 
     // IF stage
-    ll inst = dram->Read(pc);
-    ll npc = pc + 4;
-    II.instr = inst;
-    II.NPC = npc;
+    if(pc != 0){
+        ll inst = dram->Read(pc);
+        ll npc = pc + 4;
+        II.instr = inst;
+        II.NPC = npc;
+        II.pc = pc;
+    }
+
+    pc = II.NPC;
 
 
     // Branch, Jump
@@ -155,18 +181,20 @@ void CPU::clock(){
 
 ConSig CPU::ControlUnit(char opcode){
     ConSig ret;
-    bool ops[6];
+    bool ops[6]={0,};
+
     for(int i=0;i<6;i++){
-        ops[i] = (opcode >> (5-i)) & 0x1;
+        ops[i] = (opcode >> (i)) & 0x1;
     }
+    cout << ops[5] << ops[4] << ops[3] << ops[2] << ops[1] << ops[0] << endl;
     
-    ret.Branch = ops[2] & ~ops[3];
-    ret.MEMRead = ops[5] & ~ops[3];
-    ret.MEMtoReg = ops[5] & ~ops[3];
-    ret.MemWrite = ops[5] & ops[3];
-    ret.ALUSrc = ops[5] | (ops[0] | ops[2]);
-    ret.RegWrite = (ops[5] & ops[3]) | (ops[2] & ~ops[3]);
-    ret.RegDst = ~(ops[0]|ops[1]|ops[2]|ops[3]|ops[4]|ops[5]);
+    ret.Branch = ops[2] && !ops[3];
+    ret.MEMRead = ops[5] && !ops[3];
+    ret.MEMtoReg = ops[5] && !ops[3];
+    ret.MemWrite = ops[5] && ops[3];
+    ret.ALUSrc = ops[5] || (ops[0] || ops[2]);
+    ret.RegWrite = !((ops[5] && ops[3]) || (ops[2] && !ops[3]));
+    ret.RegDst = !(ops[0]||ops[1]||ops[2]||ops[3]||ops[4]||ops[5]);
     ret.ALUNeg = (opcode==0b001011);
 
     if(ret.Branch){
@@ -208,4 +236,56 @@ ConSig CPU::ControlUnit(char opcode){
     }
 
     return ret;
+}
+
+void CPU::cycle() {
+
+    cys ++;
+    
+    if (options.dop || options.pop || options.mop){
+        cout << "===== Cycle " << cys << " =====\n";
+    }
+    
+    if (options.pop){
+        cout << "Current pipeline PC state : \n";
+        cout << "{";
+        cout << "0x" << hex << pc << "|";
+        if(II.pc != 0x0){
+            cout << "0x" << hex << II.pc;
+        }
+        cout << "|";
+        if(IE.pc != 0x0){
+            cout << "0x" << hex << IE.pc;
+        }
+        cout << "|";
+        if(EM.pc != 0x0){
+            cout << "0x" << hex << EM.pc;
+        }
+        cout << "|";
+        if(MW.pc != 0x0){
+            cout << "0x" << hex << MW.pc;
+        }
+        cout << "}\n\n";
+    }
+
+    if (options.dop){
+        cout << "Current register values :\n-------------------------------------------\n";
+        cout << "PC: 0x" << hex << pc << endl;
+        cout << "Registers:" << endl;
+        for(int i=0;i<32;i++){
+            cout << "R" << dec << i << ": 0x" << hex << reg->Read(i) << endl;
+        }
+        cout << "\n";
+    }
+
+    if (options.mop){
+        cout << "Memory content [0x" << hex << options.addr1 << ".." << options.addr2 << "] : " << endl;
+        cout << "-------------------------------------------\n";
+        for(int i=options.addr1;i<=options.addr2;i+=4){
+            cout << "0x" << hex << i << ": 0x" << dram->Read(i) << endl;
+        }
+        cout << "\n";
+    }
+
+    clock();
 }

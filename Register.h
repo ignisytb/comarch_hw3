@@ -13,18 +13,18 @@ struct ConSig {
 
 
 struct IF_ID {
-    ll instr=0, NPC=0;
+    ll instr=0, NPC=0, pc=0;
 };
 
 struct ID_EX {
-    ll NPC=0, data1, data2;
+    ll pc=0, NPC=0, data1=0, data2=0;
     long IMM=0;
     char rs=0, rt=0, rd=0, Funct=0;
     ConSig CS;
 };
 
 struct EX_MEM {
-    ll data2=0;
+    ll pc=0, data2=0;
     long BR_TARGET=0;
     char rd=0;
     ALUOutput ALU_OUT;
@@ -32,7 +32,7 @@ struct EX_MEM {
 };
 
 struct MEM_WB {
-    ll MEM_OUT=0;
+    ll pc=0, MEM_OUT=0;
     long ALU_OUT=0;
     char rd=0;
     ConSig CS;

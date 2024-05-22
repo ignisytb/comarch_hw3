@@ -12,12 +12,13 @@ using namespace std;
 
 struct Ops {
     int num_inst=0x0;
-    bool atp=NULL, dop, pop, nop;
+    bool atp=NULL, dop=false, pop=false, nop=false, mop=false;
     ll addr1=0x0, addr2=0x0;
 };
 
 class CPU {
 private:
+    int cys;
     Mem* dram;
     Reg* reg;
     ALU* alu;
@@ -29,6 +30,7 @@ private:
     MEM_WB MW;
 public:
     CPU(Ops ops){
+        cys = 0;
         pc = 0x400000;
         dram = new Mem;
         reg = new Reg;
@@ -44,6 +46,7 @@ public:
         return dram->Read(addr);
     };
     void clock();
+    void cycle();
     void stall(int stage);
     ConSig ControlUnit(char opcode);
 };
