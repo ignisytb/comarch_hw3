@@ -21,4 +21,4 @@ ALU.o : ALU.cpp ALU.h
 	$(CC) -c ALU.cpp
 
 clean:
-	erase *.o
+	rm -rf *.o
