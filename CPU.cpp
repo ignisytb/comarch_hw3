@@ -70,7 +70,6 @@ void CPU::clock(){
                 if(EM.CS.ALUNeg){
                     IE.data1 = EM.ALU_OUT.Neg;
                 } else {
-                    cout << "Frs" << endl;
                     IE.data1 = EM.ALU_OUT.result;
                 }
             } else if (EM.CS.RegWrite && (EM.rd != 0) && (EM.rd == IE.rt)){
@@ -78,7 +77,6 @@ void CPU::clock(){
                 if(EM.CS.ALUNeg){
                     IE.data2 = EM.ALU_OUT.Neg;
                 } else {
-                    cout << "Frt" << endl;
                     IE.data2 = EM.ALU_OUT.result;
                 }
             }
@@ -89,15 +87,15 @@ void CPU::clock(){
         } else {
             if(EM.CS.MemWrite){
                 if(EM.CS.RWByte){
-                    dram->WriteByte(EM.data2, EM.ALU_OUT.result&0xFF);
+                    dram->WriteByte(EM.ALU_OUT.result, EM.data2&0xFF);
                 } else {
-                    dram->Write(EM.data2, EM.ALU_OUT.result);
+                    dram->Write(EM.ALU_OUT.result, EM.data2);
                 }
             } else if(EM.CS.MEMRead){
                 if(EM.CS.RWByte){
-                    MW.MEM_OUT=dram->ReadByte(EM.data2);
+                    MW.MEM_OUT=dram->ReadByte(EM.ALU_OUT.result);
                 } else {
-                    MW.MEM_OUT=dram->Read(EM.data2);
+                    MW.MEM_OUT=dram->Read(EM.ALU_OUT.result);
                 }
             } else if(Frt || Frs) {
                 if(EM.CS.ALUNeg){
@@ -119,11 +117,9 @@ void CPU::clock(){
 
             MW.rd = EM.rd;
         }
-        MW.CS = EM.CS;
-        MW.pc = EM.pc;
-    } else {
-        MW = *(new MEM_WB);
     }
+    MW.CS = EM.CS;
+    MW.pc = EM.pc;
 
     // EX stage
     if(IE.pc!=0){
@@ -132,8 +128,6 @@ void CPU::clock(){
             EM.ALU_OUT = alu->ALU_Con(IE.CS.ALUOp, IE.Funct, IE.data1, IE.IMM);
         } else {
             EM.ALU_OUT = alu->ALU_Con(IE.CS.ALUOp, IE.Funct, IE.data1, IE.data2);
-            cout << hex << IE.data1 << endl;
-            cout << dec << EM.ALU_OUT.result << endl;
         }
         EM.data2 = IE.data2;
         if(IE.CS.RegDst){
@@ -141,29 +135,24 @@ void CPU::clock(){
         } else {
             EM.rd = IE.rt;
         }
-        EM.CS = IE.CS;
-        EM.pc = IE.pc;
-    } else {
-        EM = *(new EX_MEM);
     }
+    EM.CS = IE.CS;
+    EM.pc = IE.pc;
 
     // ID stage
+    ConSig CS = ControlUnit((II.instr >> 26) & 0x3F);
+
     if(II.pc!=0){
-        ConSig CS = ControlUnit((II.instr >> 26) & 0x3F);
-        
         char rs = (II.instr >> 21) & 0x1F;
         char rt = (II.instr >> 16) & 0x1F;
-
-        if (IE.CS.MEMRead && (IE.rt == rs || IE.rt == rt)){
+        if(IE.CS.MEMRead && (IE.rt == rs || IE.rt == rt)){
             stall = true;
-            cout << "STALL" << endl;
         }
 
         if (!stall) {
             IE.NPC = II.NPC;
             IE.rs = (II.instr >> 21) & 0x1F;
             IE.rt = (II.instr >> 16) & 0x1F;
-            cout << hex << int(IE.rs) << "|" << int(IE.rt) << endl;
             IE.Funct = II.instr & 0x3F;
             IE.IMM = II.instr & 0xFFFF;
             if(!Frs){
@@ -172,35 +161,29 @@ void CPU::clock(){
             if(!Frt){
                 IE.data2 = reg->Read(IE.rt);
             }
-            cout << hex << (IE.data1) << "|" << (IE.data2) << endl;
             IE.CS = CS;
             IE.pc = II.pc;
         } else {
             IE = *(new ID_EX);
         }
-    } else {
-        IE = *(new ID_EX);
     }
 
     // IF stage
-    if(pc != 0){
-        if (!stall){
-            ll inst = dram->Read(pc);
+    cout << stall << endl;
+    if (!stall){
+        ll inst = dram->Read(pc);
+        if (inst!=0){
             ll npc = pc + 4;
             II.instr = inst;
             II.NPC = npc;
             II.pc = pc;
+        } else {
+            II = *(new IF_ID);
         }
     }
 
-    pc = II.NPC;
-    if(dram->Read(pc)==0x0){
-        II = *(new IF_ID);
-        pc = 0;
-    }
-
-
     // Branch, Jump
+    pc = II.NPC;
 }
 
 ConSig CPU::ControlUnit(char opcode){
@@ -225,7 +208,7 @@ ConSig CPU::ControlUnit(char opcode){
         ret.BN = ops[0];
     }
     if(ret.MEMRead || ret.MemWrite){
-        ret.RWByte = ~ops[1];
+        ret.RWByte = !ops[1];
     }
 
     if(opcode == 0x00){
@@ -273,8 +256,8 @@ void CPU::cycle() {
     if (options.pop){
         cout << "Current pipeline PC state : \n";
         cout << "{";
-        if(pc != 0x0){
-            cout << "0x" << hex << pc;
+        if(II.pc != 0x0){
+            cout << "0x" << hex << II.pc;
         }
         cout << "|";
         if(II.pc != 0x0){
