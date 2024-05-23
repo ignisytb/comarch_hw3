@@ -47,7 +47,6 @@ public:
     };
     void clock();
     void cycle();
-    void stall(int stage);
     ConSig ControlUnit(char opcode);
 };
 

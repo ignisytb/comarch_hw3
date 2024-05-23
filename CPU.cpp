@@ -27,13 +27,9 @@ bool CPU::Load_File(string filename){
     return true;
 }
 
-void CPU::stall(int stage){
-
-}
-
 void CPU::clock(){
 
-    bool Frs=0,Frt=0;
+    bool Frs=0,Frt=0,stall=0;
 
     // WB stage
     if (MW.pc != 0){
@@ -125,6 +121,8 @@ void CPU::clock(){
         }
         MW.CS = EM.CS;
         MW.pc = EM.pc;
+    } else {
+        MW = *(new MEM_WB);
     }
 
     // EX stage
@@ -134,6 +132,7 @@ void CPU::clock(){
             EM.ALU_OUT = alu->ALU_Con(IE.CS.ALUOp, IE.Funct, IE.data1, IE.IMM);
         } else {
             EM.ALU_OUT = alu->ALU_Con(IE.CS.ALUOp, IE.Funct, IE.data1, IE.data2);
+            cout << hex << IE.data1 << endl;
             cout << dec << EM.ALU_OUT.result << endl;
         }
         EM.data2 = IE.data2;
@@ -144,36 +143,61 @@ void CPU::clock(){
         }
         EM.CS = IE.CS;
         EM.pc = IE.pc;
+    } else {
+        EM = *(new EX_MEM);
     }
 
     // ID stage
     if(II.pc!=0){
         ConSig CS = ControlUnit((II.instr >> 26) & 0x3F);
-        IE.NPC = II.NPC;
-        IE.rs = (II.instr >> 21) & 0x1F;
-        IE.rt = (II.instr >> 16) & 0x1F;
-        IE.Funct = II.instr & 0x3F;
-        IE.IMM = II.instr & 0xFFFF;
-        if(!Frs){
-            IE.data1 = reg->Read(IE.rs);
+        
+        char rs = (II.instr >> 21) & 0x1F;
+        char rt = (II.instr >> 16) & 0x1F;
+
+        if (IE.CS.MEMRead && (IE.rt == rs || IE.rt == rt)){
+            stall = true;
+            cout << "STALL" << endl;
         }
-        if(!Frt){
-            IE.data2 = reg->Read(IE.rt);
+
+        if (!stall) {
+            IE.NPC = II.NPC;
+            IE.rs = (II.instr >> 21) & 0x1F;
+            IE.rt = (II.instr >> 16) & 0x1F;
+            cout << hex << int(IE.rs) << "|" << int(IE.rt) << endl;
+            IE.Funct = II.instr & 0x3F;
+            IE.IMM = II.instr & 0xFFFF;
+            if(!Frs){
+                IE.data1 = reg->Read(IE.rs);
+            }
+            if(!Frt){
+                IE.data2 = reg->Read(IE.rt);
+            }
+            cout << hex << (IE.data1) << "|" << (IE.data2) << endl;
+            IE.CS = CS;
+            IE.pc = II.pc;
+        } else {
+            IE = *(new ID_EX);
         }
-        IE.CS = CS;
-        IE.pc = II.pc;
+    } else {
+        IE = *(new ID_EX);
     }
 
     // IF stage
     if(pc != 0){
-        ll inst = dram->Read(pc);
-        ll npc = pc + 4;
-        II.instr = inst;
-        II.NPC = npc;
-        II.pc = pc;
+        if (!stall){
+            ll inst = dram->Read(pc);
+            ll npc = pc + 4;
+            II.instr = inst;
+            II.NPC = npc;
+            II.pc = pc;
+        }
     }
 
     pc = II.NPC;
+    if(dram->Read(pc)==0x0){
+        II = *(new IF_ID);
+        pc = 0;
+    }
 
 
     // Branch, Jump
@@ -249,7 +273,10 @@ void CPU::cycle() {
     if (options.pop){
         cout << "Current pipeline PC state : \n";
         cout << "{";
-        cout << "0x" << hex << pc << "|";
+        if(pc != 0x0){
+            cout << "0x" << hex << pc;
+        }
+        cout << "|";
         if(II.pc != 0x0){
             cout << "0x" << hex << II.pc;
         }
@@ -271,6 +298,11 @@ void CPU::cycle() {
     if (options.dop){
         cout << "Current register values :\n-------------------------------------------\n";
         cout << "PC: 0x" << hex << pc << endl;
+    }
+
+    clock();
+    
+    if (options.dop){
         cout << "Registers:" << endl;
         for(int i=0;i<32;i++){
             cout << "R" << dec << i << ": 0x" << hex << reg->Read(i) << endl;
@@ -287,5 +319,4 @@ void CPU::cycle() {
         cout << "\n";
     }
 
-    clock();
 }
