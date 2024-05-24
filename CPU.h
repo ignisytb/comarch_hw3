@@ -28,10 +28,12 @@ private:
     ID_EX IE;
     EX_MEM EM;
     MEM_WB MW;
+    ll fin_pc;
 public:
     CPU(Ops ops){
         cys = 0;
         pc = 0x400000;
+        fin_pc = 0;
         dram = new Mem;
         reg = new Reg;
         alu = new ALU;
@@ -46,7 +48,7 @@ public:
         return dram->Read(addr);
     };
     void clock();
-    void cycle();
+    bool cycle(bool fin);
     ConSig ControlUnit(char opcode);
 };
 

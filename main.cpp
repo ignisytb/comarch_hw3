@@ -75,9 +75,25 @@ int main(int argc, char* argv[]) {
 
     // cout << cpu->Read_Mem(0x400000) << endl;
 
-    if(ops.nop){
-        for(int i=0;i<ops.num_inst;i++){
-            cpu->cycle();
+    
+    if(ops.dop || ops.pop || ops.mop){
+        if(ops.nop){
+            for(int i=0;i<ops.num_inst;i++){
+                cpu->cycle(false);
+            }
+        } else {
+            while(cpu->cycle(false)){}
+            cpu->cycle(true);
+        }
+    } else {
+        if(ops.nop){
+            for(int i=0;i<ops.num_inst;i++){
+                cpu->cycle(false);
+            }
+            cpu->cycle(true);
+        } else {
+            while(cpu->cycle(false)){}
+            cpu->cycle(true);
         }
     }
 

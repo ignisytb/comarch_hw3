@@ -8,7 +8,7 @@
 
 struct ConSig {
     char ALUOp;
-    bool Branch, BN, MEMRead, MEMtoReg, MemWrite, ALUSrc, RegWrite, RegDst, RWByte, ALUNeg;
+    bool Branch, BN, MEMRead, MEMtoReg, MemWrite, ALUSrc, RegWrite, RegDst, RWByte, ALUNeg, Jump;
 };
 
 

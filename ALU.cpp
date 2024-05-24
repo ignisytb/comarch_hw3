@@ -44,6 +44,7 @@ ALUOutput ALU::ALU_Con(char ALUOp, char Funct, ll data1, ll data2){
         break;
         
         case 0b100:
+        ret.result = Suby(data1,data2);
         break;
         
         case 0b101:
